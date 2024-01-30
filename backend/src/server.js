@@ -5,6 +5,13 @@ require("./db/connection");
 const Image = require("./model/image-model")
 const multer = require("multer")
 const cors = require("cors");
+const path = require("path")
+
+
+// Add this middleware to serve static files (images) from the specified directory
+// this solution is done by ChatGPT
+app.use('/images', express.static( path.resolve(__dirname, '../../frontend/public/images')));
+console.log( path.resolve(__dirname, '../../frontend/public/images'));
 
 //Middleware
 const corsOptions = {
@@ -22,7 +29,9 @@ app.get('/', (req, res) => {
 ////////////////////////////////////////////////////////////////
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, 'uploads/')
+        // this is the place where i have to store the images in frontend
+        const destinationPath =  path.resolve(__dirname, '../../frontend/public/images');
+      cb(null, destinationPath)
     },
     filename: function (req, file, cb) {
       const uniqueSuffix = Date.now()
@@ -33,14 +42,27 @@ const storage = multer.diskStorage({
   const upload = multer({ storage: storage })
 app.post("/upload-image", upload.single("uploadedImage"), async(req, res) => {
     
-    const imageName = req.file.filename
+    
     try {
+        const imageName = req.file.filename
         await Image.create({image:imageName})
         res.status(200).json({message:"Image Uploaded"})
     } catch (error) {
-        console.log(error)
+        res.send(error.message)
     }
     
+})
+
+
+//////////////////////////////////////
+//get image from db
+app.get("/get-images",async(req,res)=>{
+   try {
+    const data = await Image.find();
+    res.status(200).json({message:data});
+   } catch (error) {
+    res.status(404).send(error);
+   }
 })
 
 app.listen(PORT , ()=>{
